@@ -12,58 +12,55 @@
 //   return NextResponse.json({ message: 'Data received', data });
 // }
 
-import { NextResponse } from 'next/server';
-import axios from 'axios';
+import { Client, middleware, MiddlewareConfig, WebhookEvent } from '@line/bot-sdk';
+import { NextRequest, NextResponse } from 'next/server';
 
-const LINE_MESSAGING_API = 'https://api.line.me/v2/bot/message/reply';
-const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN || '';  // Ensure this is set in your .env.local
-
-type LineWebhookEvent = {
-  type: string;
-  replyToken: string;
-  message: {
-    type: string;
-    text: string;
-  };
+// Setup LINE SDK configuration
+const config: MiddlewareConfig = {
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN || '',
+  channelSecret: process.env.LINE_CHANNEL_SECRET || ''
 };
 
-export async function POST(request: Request) {
-  try {
-    // Parse the JSON body
-    const body = await request.json();
-    const events: LineWebhookEvent[] = body.events;
+// Create LINE client instance
+const client = new Client({
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN || '',
+});
 
+// Handle POST request
+export async function POST(request: NextRequest): Promise<Response> {
+  try {
+    // Parse incoming webhook event body
+    const body = await request.json();
+
+    // Handle events from LINE webhook
+    const events: WebhookEvent[] = body.events;
+
+    // Process each event
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'text') {
-        const replyToken = event.replyToken;
         const userMessage = event.message.text;
+        const replyToken = event.replyToken;
 
-        // Construct the reply message
-        const replyMessage = {
-          replyToken: replyToken,
-          messages: [
-            {
-              type: 'text',
-              text: `你說了: ${userMessage}`, // Reply with the user's message
-            },
-          ],
-        };
-
-        // Send reply message to LINE Messaging API
-        await axios.post(LINE_MESSAGING_API, replyMessage, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${LINE_ACCESS_TOKEN}`, // Use Bearer token for auth
-          },
-        });
+        // Send reply to the user
+        try {
+          await client.replyMessage(replyToken, {
+            type: 'text',
+            text: `你說了: ${userMessage}`,
+          });
+        } catch (error) {
+          console.error('Error replying to message:', error);
+          return new Response(JSON.stringify({ message: 'Error replying to message' }), { status: 500 });
+        }
       }
     }
 
-    // Return success response to LINE
-    return NextResponse.json({ message: 'Success' }, { status: 200 });
+    // Return a success response to acknowledge receipt of the webhook
+    return new Response(JSON.stringify({ message: 'Success' }), { status: 200 });
   } catch (error) {
-    console.error('Error sending message:', error);
-    return NextResponse.json({ message: 'Error sending message' }, { status: 500 });
+    console.error('Error processing request:', error);
+    return new Response(JSON.stringify({ message: 'Error processing request' }), { status: 500 });
   }
 }
+
+
 
