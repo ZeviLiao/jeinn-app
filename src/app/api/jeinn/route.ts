@@ -1,7 +1,14 @@
-// ref : https://dlackty.com/line-messaging-api-sdk-revamped
-
 import { NextRequest, NextResponse } from 'next/server';
-import { messagingApi, middleware, TextMessage, WebhookEvent, MiddlewareConfig } from '@line/bot-sdk';
+import {
+  messagingApi,
+  middleware,
+  WebhookEvent,
+  TextMessage,
+  ImageMapMessage,
+  TemplateMessage,
+  FlexMessage,
+  MiddlewareConfig
+} from '@line/bot-sdk';
 
 const config: MiddlewareConfig = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
@@ -25,7 +32,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const events: WebhookEvent[] = body.events;
 
-  // Handle each event (only handling message events)
+  // Handle each event (message events, etc.)
   const results = await Promise.all(events.map(handleEvent));
 
   return NextResponse.json({ results }, { status: 200 });
@@ -34,20 +41,161 @@ export async function POST(req: NextRequest) {
 // Function to handle different event types
 async function handleEvent(event: WebhookEvent) {
   if (event.type === 'message' && event.message.type === 'text') {
-    // Reply to text message
-    const replyText = `你說了: ${event.message.text}`;
-
-    const message: TextMessage = {
-      type: 'text',
-      text: replyText,
-    };
-
-    return client.replyMessage({
-      replyToken: event.replyToken,
-      messages: [message],
-    });
+    console.log('zevi', event.message.text);
+    if (event.message.text === '你選了 B') return handleTextMessage(event);
+    if (event.message.text === '你選了 C') return handleImageMapMessage(event);
+    if (event.message.text === '你選了 D') return handleTemplateMessage(event);
+    if (event.message.text === '你選了 E') return handleFlexMessage(event);
   }
-
   // Ignore other event types for now
   return Promise.resolve(null);
+}
+
+// Handle text messages
+async function handleTextMessage(event: any) {
+  const replyText = `你說了: ${event.message.text}`;
+
+  const message: TextMessage = {
+    type: 'text',
+    text: replyText,
+  };
+
+  return client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [message],
+  });
+}
+
+// Handle imagemap messages
+async function handleImageMapMessage(event: any) {
+  const message: ImageMapMessage = {
+    type: 'imagemap',
+    baseUrl: 'https://example.com/imagemap',  // Replace with your image URL
+    altText: 'This is an imagemap',
+    baseSize: {
+      width: 1040,
+      height: 1040,
+    },
+    actions: [
+      {
+        type: 'uri',
+        linkUri: 'https://example.com',
+        area: {
+          x: 0,
+          y: 0,
+          width: 520,
+          height: 1040,
+        },
+      },
+      {
+        type: 'message',
+        text: 'You clicked the right side!',
+        area: {
+          x: 520,
+          y: 0,
+          width: 520,
+          height: 1040,
+        },
+      },
+    ],
+  };
+
+  // return client.replyMessage(event.replyToken, [message]);
+  return client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [message],
+  });
+}
+
+// Handle template messages
+async function handleTemplateMessage(event: any) {
+  const message: TemplateMessage = {
+    type: 'template',
+    altText: 'This is a buttons template',
+    template: {
+      type: 'buttons',
+      thumbnailImageUrl: 'https://res.cloudinary.com/demo/image/upload/w_400/sample.jpg',
+      imageAspectRatio: 'rectangle',
+      imageSize: 'cover',
+      imageBackgroundColor: '#FFFFFF',
+      title: 'Menu',
+      text: 'Please select',
+      actions: [
+        {
+          type: 'postback',
+          label: 'Buy',
+          data: 'action=buy&itemid=123',
+        },
+        {
+          type: 'message',
+          label: 'Say hello',
+          text: 'Hello!',
+        },
+      ],
+    },
+  };
+
+  return client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [message],
+  });
+}
+
+// Handle flex messages
+async function handleFlexMessage(event: any) {
+  return client.replyMessage({
+    replyToken: event.replyToken,
+    messages: [{
+      type: 'flex',
+      altText: 'This is a flex message',
+      contents: {
+        type: 'bubble',
+        header: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'text',
+              text: 'Flex Header',
+              weight: 'bold',
+              size: 'xl',
+            },
+          ],
+        },
+        hero: {
+          type: 'image',
+          url: 'https://example.com/hero.jpg',
+          size: 'full',
+          aspectRatio: '20:13',
+          aspectMode: 'cover',
+        },
+        body: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'text',
+              text: 'This is the body text of the flex message',
+              wrap: true,
+            },
+          ],
+        },
+        footer: {
+          type: 'box',
+          layout: 'vertical',
+          contents: [
+            {
+              type: 'button',
+              style: 'primary',
+              action: {
+                type: 'uri',
+                label: 'Go to website',
+                uri: 'https://example.com',
+              },
+            },
+          ],
+        },
+      },
+    }],
+  });
 }
