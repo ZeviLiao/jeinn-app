@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Setup LINE SDK configuration
 const config: MiddlewareConfig = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN || '',
-  channelSecret: process.env.LINE_CHANNEL_SECRET || ''
+  channelSecret: process.env.LINE_CHANNEL_SECRET || '',
 };
 
 // Create LINE client instance
@@ -27,7 +27,7 @@ const client = new Client({
 });
 
 // Handle POST request
-export async function POST(request: NextRequest): Promise<Response> {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Parse incoming webhook event body
     const body = await request.json();
@@ -49,16 +49,16 @@ export async function POST(request: NextRequest): Promise<Response> {
           });
         } catch (error) {
           console.error('Error replying to message:', error);
-          return new Response(JSON.stringify({ message: 'Error replying to message' }), { status: 500 });
+          return NextResponse.json({ message: 'Error replying to message' }, { status: 500 });
         }
       }
     }
 
     // Return a success response to acknowledge receipt of the webhook
-    return new Response(JSON.stringify({ message: 'Success' }), { status: 200 });
+    return NextResponse.json({ message: 'Success' }, { status: 200 });
   } catch (error) {
     console.error('Error processing request:', error);
-    return new Response(JSON.stringify({ message: 'Error processing request' }), { status: 500 });
+    return NextResponse.json({ message: 'Error processing request' }, { status: 500 });
   }
 }
 
