@@ -1,9 +1,9 @@
 // ref : https://dlackty.com/line-messaging-api-sdk-revamped
 
 import { NextRequest, NextResponse } from 'next/server';
-import { messagingApi, middleware, TextMessage, WebhookEvent } from '@line/bot-sdk';
+import { messagingApi, middleware, TextMessage, WebhookEvent, MiddlewareConfig } from '@line/bot-sdk';
 
-const config = {
+const config: MiddlewareConfig = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
   channelSecret: process.env.LINE_CHANNEL_SECRET!,
 };
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const events: WebhookEvent[] = body.events;
 
-  // Handle each event (assume it's only handling message events)
+  // Handle each event (only handling message events)
   const results = await Promise.all(events.map(handleEvent));
 
   return NextResponse.json({ results }, { status: 200 });
@@ -39,7 +39,7 @@ async function handleEvent(event: WebhookEvent) {
 
     const message: TextMessage = {
       type: 'text',
-      text: replyText
+      text: replyText,
     };
 
     return client.replyMessage({
