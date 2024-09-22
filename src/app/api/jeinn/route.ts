@@ -1,66 +1,53 @@
-// pages/api/notifyExpireProducts.ts
-// import { getExpireProductsListBroadcast } from '@/services/lineBotService';
-// import { NextResponse } from 'next/server';
+// ref : https://dlackty.com/line-messaging-api-sdk-revamped
 
-// export async function GET() {
-//   return NextResponse.json({ message: 'Hello, this is a GET request!' });
-// }
-
-// // Handle POST requests (if applicable)
-// export async function POST(request: Request) {
-//   const data = await getExpireProductsListBroadcast();
-//   return NextResponse.json({ message: 'Data received', data });
-// }
-
-import { Client, middleware, MiddlewareConfig, WebhookEvent } from '@line/bot-sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { messagingApi, middleware, TextMessage, WebhookEvent } from '@line/bot-sdk';
 
-// Setup LINE SDK configuration
-const config: MiddlewareConfig = {
-  channelAccessToken: process.env.LINE_ACCESS_TOKEN || '',
-  channelSecret: process.env.LINE_CHANNEL_SECRET || '',
+const config = {
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
+  channelSecret: process.env.LINE_CHANNEL_SECRET!,
 };
 
-// Create LINE client instance
-const client = new Client({
-  channelAccessToken: process.env.LINE_ACCESS_TOKEN || '',
+// Initialize Line client
+const client = new messagingApi.MessagingApiClient({
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
 });
 
-// Handle POST request
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    // Parse incoming webhook event body
-    const body = await request.json();
+// POST request handler for Line webhook
+export async function POST(req: NextRequest) {
+  const signature = req.headers.get('x-line-signature');
 
-    // Handle events from LINE webhook
-    const events: WebhookEvent[] = body.events;
-
-    // Process each event
-    for (const event of events) {
-      if (event.type === 'message' && event.message.type === 'text') {
-        const userMessage = event.message.text;
-        const replyToken = event.replyToken;
-
-        // Send reply to the user
-        try {
-          await client.replyMessage(replyToken, {
-            type: 'text',
-            text: `你說了: ${userMessage}`,
-          });
-        } catch (error) {
-          console.error('Error replying to message:', error);
-          return NextResponse.json({ message: 'Error replying to message' }, { status: 500 });
-        }
-      }
-    }
-
-    // Return a success response to acknowledge receipt of the webhook
-    return NextResponse.json({ message: 'Success' }, { status: 200 });
-  } catch (error) {
-    console.error('Error processing request:', error);
-    return NextResponse.json({ message: 'Error processing request' }, { status: 500 });
+  // Verify the request signature
+  if (!signature || !middleware(config)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
+
+  const body = await req.json();
+  const events: WebhookEvent[] = body.events;
+
+  // Handle each event (assume it's only handling message events)
+  const results = await Promise.all(events.map(handleEvent));
+
+  return NextResponse.json({ results }, { status: 200 });
 }
 
+// Function to handle different event types
+async function handleEvent(event: WebhookEvent) {
+  if (event.type === 'message' && event.message.type === 'text') {
+    // Reply to text message
+    const replyText = `你說了: ${event.message.text}`;
 
+    const message: TextMessage = {
+      type: 'text',
+      text: replyText
+    };
 
+    return client.replyMessage({
+      replyToken: event.replyToken,
+      messages: [message],
+    });
+  }
+
+  // Ignore other event types for now
+  return Promise.resolve(null);
+}
