@@ -10,6 +10,10 @@ import {
   MiddlewareConfig
 } from '@line/bot-sdk';
 
+// 主菜單和次菜單的 ID
+const mainMenuId = 'YOUR_MAIN_MENU_ID';
+const subMenuId = 'YOUR_SUB_MENU_ID';
+
 const config: MiddlewareConfig = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
   channelSecret: process.env.LINE_CHANNEL_SECRET!,
@@ -41,13 +45,31 @@ export async function POST(req: NextRequest) {
 // Function to handle different event types
 async function handleEvent(event: WebhookEvent) {
   if (event.type === 'message' && event.message.type === 'text') {
-    console.log('zevi', event.message.text);
-    if (event.message.text === '你選了 B') return handleTextMessage(event);
-    if (event.message.text === '你選了 C') return handleImageMapMessage(event);
-    if (event.message.text === '你選了 D') return handleTemplateMessage(event);
-    if (event.message.text === '你選了 E') return handleFlexMessage(event);
+    const userId = event.source.userId;
+
+    switch (event.message.text) {
+      case 'a':
+      case 'b':
+        // 回應 A 或 B 的消息
+        const replyText = `你選擇了: ${event.message.text}`;
+        return handleTextMessage(event);
+
+      case 'sub':
+        // 切換到次菜單
+        await client.linkRichMenuIdToUser(userId!, subMenuId);
+        break;
+      case 'c':
+      case 'd':
+        // 回應 C 或 D 的消息
+        return handleTextMessage(event);
+
+      case 'back':
+        // 返回主菜單
+        await client.linkRichMenuIdToUser(userId!, mainMenuId);
+        break;
+    }
   }
-  // Ignore other event types for now
+
   return Promise.resolve(null);
 }
 

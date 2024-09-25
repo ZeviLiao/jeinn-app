@@ -6,16 +6,26 @@ const client = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
 });
 
+// Disable Next.js body parsing
+// export const config = {
+//   api: {
+//     bodyParser: false,
+//   },
+// };
+
+
 // Rich Menu Operations
 export async function POST(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { action, richMenuId, userId, richMenu, updatedMenuData } = req.body;
 
+    console.log('zevi:', req.body);
     switch (action) {
       case 'create':
-        const newRichMenu: messagingApi.RichMenuRequest = JSON.parse(richMenu);
-        const newRichMenuId = await client.createRichMenu(newRichMenu);
-        return res.status(200).json({ richMenuId: newRichMenuId, message: 'Rich menu created successfully.' });
+        // const newRichMenu: messagingApi.RichMenuRequest = JSON.parse(richMenu);
+        // const newRichMenuId = await client.createRichMenu(newRichMenu);
+        // return res.status(200).json({ richMenuId: newRichMenuId, message: 'Rich menu created successfully.' });
+        return res.status(200).json({ richMenuId: richMenuId, message: 'Rich menu created successfully.' });
 
       case 'read':
         const richMenus = await client.getRichMenuList();
