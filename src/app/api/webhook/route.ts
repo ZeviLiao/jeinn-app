@@ -11,8 +11,8 @@ import {
 } from '@line/bot-sdk';
 
 // 主菜單和次菜單的 ID
-const mainMenuId = 'YOUR_MAIN_MENU_ID';
-const subMenuId = 'YOUR_SUB_MENU_ID';
+const mainMenuId = 'richmenu-752e86a65189fa3eb3670033bce5c9b0';
+const subMenuId = 'richmenu-390bcfada5625e69b3a3f18594a09210';
 
 const config: MiddlewareConfig = {
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
@@ -45,28 +45,17 @@ export async function POST(req: NextRequest) {
 // Function to handle different event types
 async function handleEvent(event: WebhookEvent) {
   if (event.type === 'message' && event.message.type === 'text') {
-    const userId = event.source.userId;
-
     switch (event.message.text) {
       case 'a':
       case 'b':
-        // 回應 A 或 B 的消息
-        const replyText = `你選擇了: ${event.message.text}`;
-        return handleTextMessage(event);
-
-      case 'sub':
-        // 切換到次菜單
-        await client.linkRichMenuIdToUser(userId!, subMenuId);
-        break;
       case 'c':
       case 'd':
-        // 回應 C 或 D 的消息
+        // 回應 A, B, C 或 D 的消息
         return handleTextMessage(event);
 
-      case 'back':
-        // 返回主菜單
-        await client.linkRichMenuIdToUser(userId!, mainMenuId);
-        break;
+      // default:
+      //   // 對未識別的消息進行處理
+      //   return handleUnknownMessage(event);
     }
   }
 

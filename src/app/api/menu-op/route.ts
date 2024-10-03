@@ -1,72 +1,77 @@
 import { messagingApi } from '@line/bot-sdk';
-import type { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Initialize Line client
 const client = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
 });
 
-// Disable Next.js body parsing
-// export const config = {
-//   api: {
-//     bodyParser: false,
-//   },
-// };
-
-
 // Rich Menu Operations
-export async function POST(req: NextApiRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   try {
-    const { action, richMenuId, userId, richMenu, updatedMenuData } = req.body;
+    const body = await req.json();
+    const { action, richMenuId, userId, richMenu, updatedMenuData, aliasId } = body;
 
-    console.log('zevi:', req.body);
+    console.log('Request Body:', body);
+
     switch (action) {
       case 'create':
-        // const newRichMenu: messagingApi.RichMenuRequest = JSON.parse(richMenu);
-        // const newRichMenuId = await client.createRichMenu(newRichMenu);
-        // return res.status(200).json({ richMenuId: newRichMenuId, message: 'Rich menu created successfully.' });
-        return res.status(200).json({ richMenuId: richMenuId, message: 'Rich menu created successfully.' });
+        if (!richMenu) {
+          return NextResponse.json({ error: 'Missing richMenu data.' }, { status: 400 });
+        }
+        const newRichMenuId = await client.createRichMenu(richMenu);
+        return NextResponse.json(newRichMenuId);
 
       case 'read':
         const richMenus = await client.getRichMenuList();
-        return res.status(200).json({ richMenus });
+        return NextResponse.json(richMenus);
 
       case 'update':
         if (!richMenuId) {
-          return res.status(400).json({ error: 'Missing richMenuId.' });
+          return NextResponse.json({ error: 'Missing richMenuId.' }, { status: 400 });
         }
         await client.deleteRichMenu(richMenuId);
-        const updatedRichMenu: messagingApi.RichMenuRequest = JSON.parse(updatedMenuData);
-        const updatedRichMenuId = await client.createRichMenu(updatedRichMenu);
-        return res.status(200).json({ richMenuId: updatedRichMenuId, message: 'Rich menu updated successfully.' });
+        // const updatedRichMenu: messagingApi.RichMenuRequest = JSON.parse(updatedMenuData || '{}');
+        const updatedRichMenuId = await client.createRichMenu(updatedMenuData);
+        return NextResponse.json(updatedRichMenuId);
 
       case 'delete':
         if (!richMenuId) {
-          return res.status(400).json({ error: 'Missing richMenuId.' });
+          return NextResponse.json({ error: 'Missing richMenuId.' }, { status: 400 });
         }
         await client.deleteRichMenu(richMenuId);
-        return res.status(200).json({ message: 'Rich menu deleted successfully.' });
+        return NextResponse.json({ message: 'Rich menu deleted successfully.' });
 
       case 'link':
         if (!userId || !richMenuId) {
-          return res.status(400).json({ error: 'Missing userId or richMenuId.' });
+          return NextResponse.json({ error: 'Missing userId or richMenuId.' }, { status: 400 });
         }
         await client.linkRichMenuIdToUser(userId, richMenuId);
-        return res.status(200).json({ message: 'Rich menu linked to user.' });
+        return NextResponse.json({ message: 'Rich menu linked to user.' });
 
       case 'setDefault':
         if (!richMenuId) {
-          return res.status(400).json({ error: 'Missing richMenuId.' });
+          return NextResponse.json({ error: 'Missing richMenuId.' }, { status: 400 });
         }
         await client.setDefaultRichMenu(richMenuId);
-        return res.status(200).json({ message: 'Rich menu set as default.' });
+        return NextResponse.json({ message: 'Rich menu set as default.' });
+
+      case 'alias':
+        if (!aliasId || !richMenuId) {
+          return NextResponse.json({ error: 'Missing aliasId or richMenuId.' }, { status: 400 });
+        }
+        await client.createRichMenuAlias({
+          richMenuAliasId: aliasId,
+          richMenuId: richMenuId,
+        });
+        return NextResponse.json({ message: `Rich menu alias '${aliasId}' created successfully.` });
 
       default:
-        return res.status(400).json({ error: 'Invalid action.' });
+        return NextResponse.json({ error: 'Invalid action.' }, { status: 400 });
     }
   } catch (error) {
     console.error('Error in rich menu operation:', error);
-    return res.status(500).json({ error: 'Operation failed' });
+    return NextResponse.json({ error: 'Operation failed' }, { status: 500 });
   }
 }
 
@@ -108,4 +113,12 @@ export async function POST(req: NextApiRequest, res: NextApiResponse) {
 //       }
 //     ]
 //   }
+// }
+
+// create
+// {
+//   "richMenuId": {
+//       "richMenuId": "richmenu-625cfd2f65ade6ae049741daf9c85059"
+//   },
+//   "message": "Rich menu created successfully."
 // }

@@ -1,11 +1,11 @@
 // app/api/upload-image/route.ts
 import { NextResponse } from 'next/server';
-import { Client } from '@line/bot-sdk';
+import { messagingApi } from '@line/bot-sdk';
 import formidable from 'formidable';
 import fs from 'fs';
 
 // Initialize LINE client
-const client = new Client({
+const client = new messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_ACCESS_TOKEN!,
 });
 
@@ -15,6 +15,25 @@ export const config = {
     bodyParser: false,
   },
 };
+
+async function uploadImageToRichMenu(richMenuId: string, imageBuffer: Buffer) {
+  const url = `https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.LINE_ACCESS_TOKEN}`,
+      'Content-Type': 'image/png', // Adjust this if using a different image type
+    },
+    body: imageBuffer, // Directly send the image buffer
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error uploading image: ${response.statusText}`);
+  }
+
+  console.log('Image uploaded successfully!');
+}
 
 // Rich Menu Image Upload Handler
 export async function POST(req: Request) {
@@ -34,11 +53,11 @@ export async function POST(req: Request) {
       }
 
       try {
-        // Read the image file as a buffer
+        // Read the image file as a buffer from the temporary file location provided by formidable
         const imageBuffer = fs.readFileSync(imageFile.filepath);
 
         // Upload the image to LINE
-        await client.setRichMenuImage(richMenuId, imageBuffer, 'image/jpeg');
+        await uploadImageToRichMenu(richMenuId, imageBuffer);
 
         resolve(NextResponse.json({ message: 'Image uploaded successfully.' }));
       } catch (error) {
